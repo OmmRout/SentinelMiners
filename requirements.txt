@@ -5,3 +5,5 @@ numpy
 joblib
 xgboost
 jinja2
+paho-mqtt
+gunicorn
