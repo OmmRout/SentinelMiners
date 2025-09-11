@@ -1,16 +1,54 @@
-
 # app.py - Updated Flask App with IoT Alerts
 import os, json, time, joblib
 import paho.mqtt.client as mqtt
+from pathlib import Path
 from flask import Flask, render_template, request
 
 app = Flask(__name__)
 
-# Load ML models
-model = joblib.load(os.path.join("model_out", "model_pipeline.pkl"))
-zone_model = joblib.load(os.path.join("model_out_zone", "model_pipeline_zone.pkl"))
+# -----------------------------
+# Helper to load metadata safely
+# -----------------------------
+def load_metadata(path):
+    try:
+        with open(path, "r") as f:
+            return json.load(f)
+    except Exception:
+        return {}
 
+# -----------------------------
+# Main model
+# -----------------------------
+MODEL_DIR = Path("model_out")
+MODEL_PIPELINE_PATH = MODEL_DIR / "model_pipeline.pkl"
+METADATA_PATH = MODEL_DIR / "metadata.json"
+
+model = joblib.load(MODEL_PIPELINE_PATH)
+
+TARGET_COL_MAIN = "Landslide"  # default
+if METADATA_PATH.exists():
+    metadata = load_metadata(METADATA_PATH)
+    if "target_col" in metadata:
+        TARGET_COL_MAIN = metadata["target_col"]
+
+# -----------------------------
+# Zone model
+# -----------------------------
+MODEL_DIR_ZONE = Path("model_out_zone")
+MODEL_PIPELINE_PATH_ZONE = MODEL_DIR_ZONE / "model_pipeline_zone.pkl"
+METADATA_PATH_ZONE = MODEL_DIR_ZONE / "metadata_zone.json"
+
+zone_model = joblib.load(MODEL_PIPELINE_PATH_ZONE)
+
+TARGET_COL_ZONE = "Event_Label"  # default
+if METADATA_PATH_ZONE.exists():
+    metadata_zone = load_metadata(METADATA_PATH_ZONE)
+    if "target_col" in metadata_zone:
+        TARGET_COL_ZONE = metadata_zone["target_col"]
+
+# -----------------------------
 # MQTT Config
+# -----------------------------
 MQTT_HOST = "192.168.1.50"  # Change to Raspberry Pi IP
 MQTT_PORT = 1883
 MQTT_TOPIC_BASE = "mine/alerts/evac"
