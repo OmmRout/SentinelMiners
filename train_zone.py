@@ -22,10 +22,10 @@ def main(csv_path, target_col=None, out_dir="model_out_zone"):
     df = pd.read_csv(csv_path)
     print("Shape:", df.shape)
 
-    # Auto-detect target
+    # Auto-detect target if not given
     if target_col is None:
         candidates = [c for c in df.columns if c.lower() in 
-                      ("landslide","risk","label","zonerisk","zone_risk","rockfall")]
+                      ("landslide","risk","label","zonerisk","zone_risk","rockfall","event_label")]
         target_col = candidates[0] if candidates else df.columns[-1]
         print("Target column:", target_col)
 
@@ -50,7 +50,7 @@ def main(csv_path, target_col=None, out_dir="model_out_zone"):
     ])
     categorical_transformer = Pipeline([
         ("imputer", SimpleImputer(strategy="most_frequent")),
-        ("onehot", OneHotEncoder(handle_unknown="ignore", sparse=False))
+        ("onehot", OneHotEncoder(handle_unknown="ignore", sparse_output=False))  # ✅ FIXED
     ])
     preprocessor = ColumnTransformer([
         ("num", numeric_transformer, numeric_features),
@@ -67,13 +67,15 @@ def main(csv_path, target_col=None, out_dir="model_out_zone"):
     print("Accuracy:", accuracy_score(y_test, pipeline.predict(X_test)))
     print(classification_report(y_test, pipeline.predict(X_test)))
 
-    # Save
+    # Save model
     joblib.dump(pipeline, out_dir / "model_pipeline_zone.pkl")
     print("✅ Saved zone model")
 
+    # Save metadata (includes target_col now!)
     metadata = {
         "numeric_features": numeric_features,
         "categorical_features": categorical_features,
+        "target_col": target_col,
         "feature_example_values": {}
     }
     for col in X.columns:
@@ -90,7 +92,7 @@ def main(csv_path, target_col=None, out_dir="model_out_zone"):
 
     with open(out_dir / "metadata_zone.json", "w") as f:
         json.dump(metadata, f, indent=2)
-    print("✅ Saved metadata")
+    print("✅ Saved metadata with target_col:", target_col)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
