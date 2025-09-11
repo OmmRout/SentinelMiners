@@ -11,6 +11,7 @@
     "Timestamp",
     "Zone"
   ],
+  "target_col": "Event_Label",
   "feature_example_values": {
     "Timestamp": {
       "unique": [
